@@ -8,6 +8,8 @@ A calculated Langley or Halifax plan opens [Crater Light](https://coolcode.ca/ot
 Choose 30, 60, 90 or 120 minutes and optionally require the Moon below the horizon. Nightfinder ranks each target’s continuous dark session by its lowest sampled altitude. Select a target to move the chart to its start, read the compass bearing, and download the sessions with the plan.
 <!-- /coolcode:guide -->
 
+The catalogue card is maintained in [tool.json](tool.json). Its practical example appears in the marked excerpt above.
+
 ## Build
 
 Run `node --test tests/*.test.mjs` to check session selection. Run `python3 scripts/build.py` and `python3 -m http.server 8000 --directory dist`. Open http://localhost:8000/. The build pins and checks the integrity of [Astronomy Engine 2.1.19](https://github.com/cosinekitty/astronomy), under its bundled MIT notice. GitHub Pages serves the compiled directory. The calculations run entirely in your browser and coordinates do not leave the device.

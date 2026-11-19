@@ -1,0 +1,23 @@
+{
+  "id": "nightfinder",
+  "title": "Nightfinder",
+  "description": "Find a continuous dark observing session and check target altitude, compass direction and camera framing.",
+  "category": "field-kit",
+  "tags": [
+    "astronomy",
+    "clouds",
+    "dslr",
+    "planets",
+    "moon",
+    "astrophotography"
+  ],
+  "icon": "telescope",
+  "url": "/nightfinder/",
+  "source": "https://github.com/jsdyer/nightfinder",
+  "hosting": "project",
+  "access": "browser",
+  "data_info": {
+    "mode": "local",
+    "detail": "Sun, Moon and target positions are calculated on your device for the selected site and observing window."
+  }
+}
