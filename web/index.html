@@ -15,7 +15,7 @@
     <div class="wrap">
       <nav><a class="brand" href="https://coolcode.ca/"><b>&gt;_</b> CoolCode.ca</a><span>Sky photography</span></nav>
       <div class="hero">
-        <div><h1>Nightfinder.</h1><p>Find the dark hours, choose a target, and check what fits in your lens.</p></div>
+        <div><h1>Nightfinder.</h1><p>Find a continuous dark window for your camera, see which targets stay high enough, and check where to point when you arrive.</p></div>
         <pre class="terminal" aria-hidden="true">  .    *         .
       .     _✦_
   ·       /     \  ·
@@ -45,6 +45,15 @@
         <div><dt>Moon at mid-night</dt><dd id="moon"></dd></div>
         <div><dt>Horizontal × vertical frame</dt><dd id="fov"></dd></div>
       </dl>
+      <section class="panel" aria-labelledby="session-heading">
+        <h2 id="session-heading">Find an observing session</h2>
+        <div class="fields">
+          <label>Time on target <select id="duration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></label>
+          <label>Moon constraint <select id="moon-rule"><option value="any">Any Moon altitude</option><option value="down">Moon below the horizon</option></select></label>
+        </div>
+        <p class="muted">Each suggested block keeps the target above your minimum altitude and the Sun below −18° at every six-minute sample. The highest minimum altitude wins for each target. Times include the local date and UTC offset.</p>
+        <p id="session-status" role="status"></p><div class="scroll"><table><thead><tr><th>Target</th><th>Session start and end</th><th>Point at start</th><th>Lowest target altitude</th><th>Highest Moon altitude</th></tr></thead><tbody id="session-rows"></tbody></table></div>
+      </section>
       <section class="panel">
         <div class="row between"><h2>Altitude through the night</h2><label>Show target <select id="target"></select></label></div>
         <canvas id="graph" role="img" aria-label="Altitude curves for the Sun, Moon and selected target. The time inspector below lists exact sampled values."></canvas>
