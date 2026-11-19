@@ -37,6 +37,14 @@ function build() {
     focal: $('focal').valueAsNumber,
   };
   current = plan(globalThis.Astronomy, settings);
+  const craterLink = new URL('https://coolcode.ca/otherworldnames/crater-light/');
+  craterLink.searchParams.set('feature', '1296');
+  const craterSite = {'Langley, BC': 'langley', 'Halifax, NS': 'halifax'}[name];
+  if (craterSite) {
+    craterLink.searchParams.set('site', craterSite);
+    craterLink.searchParams.set('date', settings.date);
+  }
+  $('crater-light').href = craterLink.href;
   const moonPhases = ['New', 'Waxing crescent', 'First quarter', 'Waxing gibbous', 'Full', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
   $('dark').textContent = current.dark.length ? current.dark.map(span).join(' · ') : 'No astronomical darkness';
   $('moon').textContent = moonPhases[Math.round(current.moonPhase / 45) % 8] + ' · ' + Math.round(100 * current.moonLight) + '% lit';
