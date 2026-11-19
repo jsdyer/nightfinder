@@ -146,3 +146,33 @@ export function plan(engine, settings) {
   summary.sort((a,b) => Number(Boolean(b.windows.length)) - Number(Boolean(a.windows.length)) || b.best.altitude - a.best.altitude);
   return {settings, samples, paths, dark: darkIntervals(samples), frame: frame(sensor, focal), moonPhase, moonLight, targets: summary};
 }
+
+export function observingSessions(sky, duration, moonBelow) {
+  const steps = duration / 6;
+  if (!Number.isInteger(steps) || steps <= 0) return [];
+  const sessions = [];
+  for (const target of sky.targets) {
+    const path = sky.paths[target.id];
+    let best = null;
+    for (let start = 0; start + steps < path.length; start++) {
+      const end = start + steps;
+      if (path[end].t - path[start].t !== duration * minute) continue;
+      let floor = Infinity, moonHigh = -Infinity;
+      for (let i = start; i <= end; i++) {
+        const {sun, moon} = sky.samples[i];
+        if (sun >= -18 || (moonBelow && moon >= 0) || path[i].altitude < sky.settings.threshold) {
+          floor = -Infinity;
+          break;
+        }
+        floor = Math.min(floor, path[i].altitude);
+        moonHigh = Math.max(moonHigh, moon);
+      }
+      if (Number.isFinite(floor) && (!best || floor > best.floor)) {
+        best = {id: target.id, name: target.name, start: path[start].t, end: path[end].t,
+          startIndex: start, altitude: path[start].altitude, azimuth: path[start].azimuth, floor, moonHigh};
+      }
+    }
+    if (best) sessions.push(best);
+  }
+  return sessions.sort((a, b) => b.floor - a.floor || a.name.localeCompare(b.name));
+}

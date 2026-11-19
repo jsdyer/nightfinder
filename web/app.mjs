@@ -1,7 +1,8 @@
-import {bearing, dateAt, plan, sites} from './model.mjs';
+import {bearing, dateAt, plan, sites, observingSessions} from './model.mjs';
 const $ = id => document.getElementById(id);
 let current = null;
 let clock = null;
+let sessions = [];
 let first = true;
 const fmt = value => clock.format(new Date(value));
 const degrees = n => Intl.NumberFormat('en-CA', {maximumFractionDigits: 1}).format(n) + '°';
@@ -56,7 +57,36 @@ function build() {
   $('time').value = firstDark < 0 ? Math.floor(current.samples.length / 2) : firstDark;
   status(name + ' · ' + zone + ' · six-minute samples');
   renderTargets();
+  renderSessions();
   graph();
+}
+
+function renderSessions() {
+  if (!current) return;
+  const duration = Number($('duration').value), moonBelow = $('moon-rule').value === 'down';
+  sessions = observingSessions(current, duration, moonBelow);
+  const stamp = new Intl.DateTimeFormat('en-CA', {timeZone: current.settings.zone, month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'shortOffset'});
+  $('session-status').textContent = sessions.length
+    ? sessions.length + ' targets have a continuous ' + duration + '-minute window. Select a target to inspect its start on the chart.'
+    : 'No target has a continuous ' + duration + '-minute window with these settings. Try a shorter session, a different Moon constraint or another night.';
+  const rows = sessions.map(session => {
+    const row = document.createElement('tr'), button = document.createElement('button');
+    button.type = 'button'; button.textContent = session.name;
+    button.addEventListener('click', () => {
+      $('target').value = session.id;
+      $('time').value = session.startIndex;
+      renderTargets(); graph();
+      $('time').focus();
+    });
+    row.insertCell().append(button);
+    row.insertCell().textContent = stamp.format(session.start) + ' – ' + stamp.format(session.end);
+    row.insertCell().textContent = bearing(session.azimuth) + ' ' + degrees(session.azimuth) + ' · ' + degrees(session.altitude) + ' high';
+    row.insertCell().textContent = degrees(session.floor);
+    row.insertCell().textContent = degrees(session.moonHigh);
+    return row;
+  });
+  $('session-rows').replaceChildren(...rows);
 }
 
 function framing(item) {
@@ -159,11 +189,12 @@ $('planner').addEventListener('submit', event => {
 });
 $('target').addEventListener('change', () => {renderTargets(); graph();});
 $('category').addEventListener('change', renderTargets);
+for (const id of ['duration','moon-rule']) $(id).addEventListener('change', renderSessions);
 $('time').addEventListener('input', graph);
 new ResizeObserver(graph).observe($('graph'));
 $('export').addEventListener('click', () => {
   const {settings, dark, frame, moonPhase, moonLight, targets} = current;
-  const record = {settings, dark, frame, moonPhase, moonLight, targets, timing:'Unix milliseconds, UTC', source:'Astronomy Engine 2.1.19; fixed J2000 object catalogue'};
+  const record = {settings, sessionMinutes: Number($('duration').value), requireMoonBelow: $('moon-rule').value === 'down', sessions, dark, frame, moonPhase, moonLight, targets, timing:'Unix milliseconds, UTC', source:'Astronomy Engine 2.1.19; fixed J2000 object catalogue'};
   const href = URL.createObjectURL(new Blob([JSON.stringify(record, null, 2)], {type:'application/json'}));
   const a = Object.assign(document.createElement('a'), {href, download:'nightfinder-' + settings.date + '.json'});
   a.click();
