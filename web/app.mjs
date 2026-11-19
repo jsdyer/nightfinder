@@ -1,4 +1,5 @@
-import {bearing, dateAt, plan, sites, observingSessions} from './model.mjs';
+import {bearing, dateAt, plan, observingSessions} from './model.mjs';
+import {locations, matchingLocations, regions, sourceDate} from './location-search.mjs';
 const $ = id => document.getElementById(id);
 let current = null;
 let clock = null;
@@ -12,8 +13,8 @@ const status = (message, error = false) => {
   $('status').classList.toggle('error', error);
 };
 function preset() {
-  if ($('site').value === 'custom') return;
-  const [name, lat, lon, zone] = sites[Number($('site').value)];
+  if (!$('site').value || $('site').value === 'custom') return;
+  const {lat, lon, zone} = locations[Number($('site').value)];
   $('lat').value = lat;
   $('lon').value = lon;
   $('zone').value = zone;
@@ -29,7 +30,7 @@ function build() {
   } catch {
     throw new Error('Enter a valid IANA time zone, such as America/Halifax.');
   }
-  const name = $('site').value === 'custom' ? 'Custom site' : sites[Number($('site').value)][0];
+  const name = $('site').value === 'custom' ? 'Custom site' : locations[Number($('site').value)].name;
   const settings = {
     name, zone, date: $('date').value,
     lat: $('lat').valueAsNumber, lon: $('lon').valueAsNumber,
@@ -180,7 +181,30 @@ function graph() {
     ' ' + degrees(selected.altitude) + ' ' + bearing(selected.azimuth);
 }
 
-$('site').append(...sites.map((site, index) => new Option(site[0], index)), new Option('Custom coordinates', 'custom'));
+function showLocations() {
+  const previous = $('site').value;
+  const matches = matchingLocations($('place-search').value, $('region').value);
+  const shown = matches.slice(0, 60);
+  const prompt = new Option(matches.length ? 'Choose a matching place' : 'No matching places', '');
+  prompt.disabled = true;
+  $('site').replaceChildren(prompt, ...shown.map(p => new Option(p.display, p.id)), new Option('Custom coordinates', 'custom'));
+  const remembered = shown.some(p => String(p.id) === previous);
+  const initial = first && !$('region').value && !$('place-search').value;
+  if (remembered) $('site').value = previous;
+  else if (matches.length === 1 || initial) $('site').value = String(matches[0].id);
+  else $('site').value = '';
+  $('match-count').textContent = matches.length > shown.length
+    ? 'Showing ' + shown.length + ' of ' + matches.length.toLocaleString('en-CA') + ' places. Narrow the list by name or region.'
+    : matches.length ? matches.length + (matches.length === 1 ? ' matching place.' : ' matching places.')
+    : 'No matches. Change the search or select custom coordinates.';
+  preset();
+}
+
+for (const [code, label] of Object.entries(regions)) $('region').add(new Option(label, code));
+$('place-search').addEventListener('input', showLocations);
+$('region').addEventListener('change', showLocations);
+$('edition').textContent = sourceDate;
+showLocations();
 $('site').addEventListener('change', preset);
 for (const field of ['lat','lon','zone']) $(field).addEventListener('input', () => { $('site').value = 'custom'; });
 $('planner').addEventListener('submit', event => {
@@ -200,7 +224,6 @@ $('export').addEventListener('click', () => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(href), 1000);
 });
-preset();
 window.addEventListener('load', () => {
   try { build(); } catch (error) {status(error.message, true);}
 }, {once:true});

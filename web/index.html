@@ -3,11 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'">
-  <meta name="description" content="Plan a night of sky photography from any location. Compare darkness, Moon, planets, target altitude and camera framing offline.">
-  <title>Nightfinder · CoolCode</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="description" content="Find dark observing hours, Moon altitude and astrophotography targets for Canadian communities in all 13 provinces and territories or your own coordinates.">
+  <title>Canadian night sky and astrophotography planner · Nightfinder</title>
+  <link rel="canonical" href="https://coolcode.ca/nightfinder/">
+  <meta property="og:title" content="Nightfinder · Plan a night of astrophotography in Canada">
   <link rel="stylesheet" href="./style.css">
   <script defer src="./astronomy.js"></script>
+  <script defer src="/assets/tool-metrics.js"></script>
   <script type="module" src="./app.mjs"></script>
 </head>
 <body>
@@ -27,8 +30,11 @@
   <main class="wrap">
     <form id="planner" class="panel">
       <h2>Plan a night</h2>
+      <p class="muted">Search Canadian communities across all 13 provinces and territories, or enter your own observing coordinates.</p>
       <div class="fields">
-        <label>Observing site <select id="site"></select></label>
+        <label>Province or territory <select id="region"><option value="">All of Canada</option></select></label>
+        <label>Find a community <input id="place-search" type="search" placeholder="e.g. Iqaluit" autocomplete="off"></label>
+        <label>Observing site <select id="site" required aria-describedby="match-count"></select></label>
         <label>Night starting <input id="date" type="date" min="1900-01-01" max="2100-12-30" required></label>
         <label>Latitude <input id="lat" type="number" step="any" min="-90" max="90" required></label>
         <label>Longitude <input id="lon" type="number" step="any" min="-180" max="180" required></label>
@@ -37,6 +43,7 @@
         <label>Camera sensor <select id="sensor"><option value="36,24">Full frame · 36 × 24 mm</option><option value="23.5,15.6" selected>APS-C · 23.5 × 15.6 mm</option><option value="22.3,14.9">Canon APS-C · 22.3 × 14.9 mm</option><option value="17.3,13">Micro Four Thirds</option></select></label>
         <label>Focal length (mm) <input id="focal" type="number" min="6" max="6000" value="135" step="any" required></label>
       </div>
+      <p id="match-count" class="muted" role="status"></p>
       <div class="row"><button class="primary" type="submit">Calculate sky</button><p id="status" role="status">Calculations run on your device.</p></div>
     </form>
     <div id="results" hidden>
@@ -69,8 +76,8 @@
       </section>
     </div>
     <section class="panel"><h2>Light on the Moon</h2><p>Choose a named lunar crater and compare low-angle sunlight with the Moon’s height from Langley or Halifax.</p><a id="crater-light" href="https://coolcode.ca/otherworldnames/crater-light/?feature=1296">Open Crater Light for Copernicus</a></section>
-    <details class="panel"><summary>How Nightfinder calculates the sky</summary><p>Charts run from local noon to the following noon. Dark intervals are calculated from the geometric Sun altitude crossing −18°. The Moon and planets use topocentric positions. Deep sky targets use J2000 equatorial coordinates transformed to the date of your observation. Target windows and peak times use samples every six minutes.</p><p>Framing uses the specified sensor and focal length with a rectilinear lens. Catalogued sizes are approximate and assume you can turn the camera. Check terrain, light pollution and cloud separately before travelling.</p><p><a href="https://github.com/cosinekitty/astronomy">Astronomy Engine 2.1.19 and MIT licence</a> · <a href="https://simbad.cds.unistra.fr/simbad/">SIMBAD catalogue</a> · <a href="https://weather.gc.ca/">Canadian weather</a></p></details>
+    <details class="panel"><summary>How Nightfinder calculates the sky</summary><p>Charts run from local noon to the following noon. Dark intervals are calculated from the geometric Sun altitude crossing −18°. The Moon and planets use topocentric positions. Deep sky targets use J2000 equatorial coordinates transformed to the date of your observation. Target windows and peak times use samples every six minutes.</p><p>Framing uses the specified sensor and focal length with a rectilinear lens. Catalogued sizes are approximate and assume you can turn the camera. Check terrain, light pollution and cloud separately before travelling.</p><p>Community centre coordinates and IANA time zones are adapted from <a href="https://www.geonames.org/">GeoNames</a> (<a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>). Gazetteer edition <span id="edition"></span>. Local times use your browser’s time-zone rules. Use custom coordinates for your exact observing site.</p><p><a href="https://github.com/cosinekitty/astronomy">Astronomy Engine 2.1.19 and MIT licence</a> · <a href="https://simbad.cds.unistra.fr/simbad/">SIMBAD catalogue</a> · <a href="https://weather.gc.ca/">Canadian weather</a></p></details>
   </main>
-  <footer><div class="wrap"><span>CoolCode · Nightfinder</span><a href="https://github.com/jsdyer/nightfinder">Source code</a></div></footer>
+  <footer><div class="wrap"><span>CoolCode · Nightfinder</span><a href="/report/?tool=nightfinder">Report an issue</a><a href="https://github.com/jsdyer/nightfinder">Source code</a></div></footer>
 </body>
 </html>

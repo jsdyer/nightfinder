@@ -1,7 +1,7 @@
 {
   "id": "nightfinder",
   "title": "Nightfinder",
-  "description": "Find a continuous dark observing session and check target altitude, compass direction and camera framing.",
+  "description": "Find astronomical darkness, target altitude and camera framing for Canadian communities or your own coordinates.",
   "category": "field-kit",
   "tags": [
     "astronomy",
@@ -9,7 +9,10 @@
     "dslr",
     "planets",
     "moon",
-    "astrophotography"
+    "astrophotography",
+    "Canada",
+    "night sky",
+    "observing sites"
   ],
   "icon": "telescope",
   "url": "/nightfinder/",
@@ -18,6 +21,6 @@
   "access": "browser",
   "data_info": {
     "mode": "local",
-    "detail": "Sun, Moon and target positions are calculated on your device for the selected site and observing window."
+    "detail": "GeoNames supplies Canadian community centres and time zones. Sun, Moon and target positions are calculated on your device."
   }
 }
