@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.open-meteo.com; img-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="description" content="Find dark observing hours, Moon altitude and astrophotography targets for Canadian communities in all 13 provinces and territories or your own coordinates.">
   <title>Canadian night sky and astrophotography planner · Nightfinder</title>
   <link rel="canonical" href="https://coolcode.ca/nightfinder/">
@@ -52,6 +52,16 @@
         <div><dt>Moon at mid-night</dt><dd id="moon"></dd></div>
         <div><dt>Horizontal × vertical frame</dt><dd id="fov"></dd></div>
       </dl>
+      <section class="panel" id="photography" aria-labelledby="photo-title">
+        <h2 id="photo-title">Seven days of golden and blue light</h2>
+        <p class="muted">Starting at local noon on your selected date. Golden light uses a geometric Sun altitude of −4° to +6°; blue hour uses −6° to −4°. Terrain, weather and your subject affect the actual light.</p>
+        <button type="button" id="load-clouds">Load cloud forecast for these coordinates</button>
+        <p id="cloud-status" class="muted" role="status"></p>
+        <p class="muted">This button sends latitude and longitude to <a href="https://open-meteo.com/">Open-Meteo</a>. Forecast data: <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Astronomy calculations stay on your device.</p>
+        <p id="photo-empty" hidden>The Sun does not cross these light bands in the selected seven-day period.</p>
+        <div class="scroll"><table><thead><tr><th>Light</th><th>Local start and end</th><th>Duration</th><th>Cloud cover near window</th></tr></thead><tbody id="photo-rows"></tbody></table></div>
+        <p><a href="https://coolcode.ca/tide-and-dark/">Match coastal photography with Tide &amp; Dark</a> · <a href="https://coolcode.ca/satpasses/">Find satellite passes</a></p>
+      </section>
       <section class="panel" aria-labelledby="session-heading">
         <h2 id="session-heading">Find an observing session</h2>
         <div class="fields">

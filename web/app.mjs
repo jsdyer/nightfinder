@@ -1,10 +1,12 @@
 import {bearing, dateAt, plan, observingSessions} from './model.mjs';
 import {locations, matchingLocations, regions, sourceDate} from './location-search.mjs';
+import {photographyWeek, cloudForWindow} from './photography.mjs';
 const $ = id => document.getElementById(id);
 let current = null;
 let clock = null;
 let sessions = [];
 let first = true;
+let photoWindows = [], cloudHourly = null, cloudRequest = 0;
 const fmt = value => clock.format(new Date(value));
 const degrees = n => Intl.NumberFormat('en-CA', {maximumFractionDigits: 1}).format(n) + '°';
 const span = ([start, end]) => start === end ? fmt(start) + ' (one sample)' : fmt(start) + '–' + fmt(end);
@@ -39,6 +41,11 @@ function build() {
     focal: $('focal').valueAsNumber,
   };
   current = plan(globalThis.Astronomy, settings);
+  photoWindows = photographyWeek(globalThis.Astronomy, settings);
+  cloudHourly = null; cloudRequest++;
+  $('cloud-status').textContent = 'Solar windows are calculated locally. Cloud forecasts load only when requested.';
+  $('load-clouds').disabled = false;
+  renderPhotography();
   const craterLink = new URL('https://coolcode.ca/otherworldnames/crater-light/');
   craterLink.searchParams.set('feature', '1296');
   const craterSite = {'Langley, BC': 'langley', 'Halifax, NS': 'halifax'}[name];
@@ -89,6 +96,39 @@ function renderSessions() {
   });
   $('session-rows').replaceChildren(...rows);
 }
+
+function renderPhotography() {
+  const format = new Intl.DateTimeFormat('en-CA',{timeZone:current.settings.zone,month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'shortOffset'});
+  $('photo-rows').replaceChildren(...photoWindows.map(window=>{
+    const row=document.createElement('tr');
+    row.insertCell().textContent=window.kind+' · '+window.phase;
+    row.insertCell().textContent=format.format(window.start)+' – '+format.format(window.end);
+    row.insertCell().textContent=Math.round((window.end-window.start)/60000)+' min';
+    const cloud=cloudForWindow(cloudHourly,window);
+    row.insertCell().textContent=cloud===null?'No forecast loaded for this window':cloud+'%';
+    return row;
+  }));
+  $('photo-empty').hidden=photoWindows.length>0;
+}
+
+$('load-clouds').addEventListener('click',async()=>{
+  if(!current)return;
+  const token=++cloudRequest;
+  $('load-clouds').disabled=true;
+  $('cloud-status').textContent='Loading the next seven days of cloud forecasts…';
+  try {
+    const url=new URL('https://api.open-meteo.com/v1/forecast');
+    url.search=new URLSearchParams({latitude:current.settings.lat,longitude:current.settings.lon,hourly:'cloud_cover',forecast_days:7,timezone:'GMT',timeformat:'unixtime'});
+    const response=await fetch(url,{credentials:'omit',referrerPolicy:'no-referrer',signal:AbortSignal.timeout(15000)});
+    if(!response.ok)throw Error('Forecast service returned HTTP '+response.status);
+    const data=await response.json();
+    if(!Array.isArray(data.hourly?.time)||!Array.isArray(data.hourly?.cloud_cover))throw Error('Cloud forecast is unavailable.');
+    if(token!==cloudRequest)return;
+    cloudHourly=data.hourly;renderPhotography();
+    $('cloud-status').textContent='Open-Meteo cloud forecast retrieved '+new Date().toISOString()+'. Windows outside the forecast period have no cloud value. Lower cloud cover may help, but does not guarantee clear skies.';
+  } catch(error) { if(token===cloudRequest)$('cloud-status').textContent=error.message+' Solar windows remain available.'; }
+  finally {if(token===cloudRequest)$('load-clouds').disabled=false;}
+});
 
 function framing(item) {
   if (!item.width) return 'Point / small disk';
@@ -218,7 +258,7 @@ $('time').addEventListener('input', graph);
 new ResizeObserver(graph).observe($('graph'));
 $('export').addEventListener('click', () => {
   const {settings, dark, frame, moonPhase, moonLight, targets} = current;
-  const record = {settings, sessionMinutes: Number($('duration').value), requireMoonBelow: $('moon-rule').value === 'down', sessions, dark, frame, moonPhase, moonLight, targets, timing:'Unix milliseconds, UTC', source:'Astronomy Engine 2.1.19; fixed J2000 object catalogue'};
+  const record = {settings, photography:photoWindows.map(w=>({...w,cloudCoverPercent:cloudForWindow(cloudHourly,w)})), sessionMinutes: Number($('duration').value), requireMoonBelow: $('moon-rule').value === 'down', sessions, dark, frame, moonPhase, moonLight, targets, timing:'Unix milliseconds, UTC', source:'Astronomy Engine 2.1.19; fixed J2000 object catalogue; optional Open-Meteo forecast'};
   const href = URL.createObjectURL(new Blob([JSON.stringify(record, null, 2)], {type:'application/json'}));
   const a = Object.assign(document.createElement('a'), {href, download:'nightfinder-' + settings.date + '.json'});
   a.click();

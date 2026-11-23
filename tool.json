@@ -1,7 +1,7 @@
 {
   "id": "nightfinder",
   "title": "Nightfinder",
-  "description": "Find astronomical darkness, target altitude and camera framing for Canadian communities or your own coordinates.",
+  "description": "Plan dark-sky sessions, camera framing and seven days of golden and blue-hour photography windows.",
   "category": "field-kit",
   "tags": [
     "astronomy",
@@ -20,7 +20,7 @@
   "hosting": "project",
   "access": "browser",
   "data_info": {
-    "mode": "local",
-    "detail": "GeoNames supplies Canadian community centres and time zones. Sun, Moon and target positions are calculated on your device."
+    "mode": "mixed",
+    "detail": "Sun, Moon and target positions are calculated locally. Optional cloud forecasts come from Open-Meteo only when requested."
   }
 }
