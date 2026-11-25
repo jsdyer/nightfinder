@@ -1,3 +1,4 @@
+import {parseHorizon,horizonAt,clearance,readProfiles} from './horizon.mjs';
 import {bearing, dateAt, plan, observingSessions} from './model.mjs';
 import {locations, matchingLocations, regions, sourceDate} from './location-search.mjs';
 import {photographyWeek, cloudForWindow} from './photography.mjs';
@@ -6,10 +7,12 @@ let current = null;
 let clock = null;
 let sessions = [];
 let first = true;
+const horizonKey='coolcode:nightfinder:horizons:v1';
+let profiles=[];try{profiles=readProfiles(localStorage.getItem(horizonKey));}catch{}
 let photoWindows = [], cloudHourly = null, cloudRequest = 0;
 const fmt = value => clock.format(new Date(value));
 const degrees = n => Intl.NumberFormat('en-CA', {maximumFractionDigits: 1}).format(n) + '°';
-const span = ([start, end]) => start === end ? fmt(start) + ' (one sample)' : fmt(start) + '–' + fmt(end);
+const span = ([start, end]) => start === end ? fmt(start) + ' (one sample)' : dateAt(new Date(start),current.settings.zone)!==dateAt(new Date(end),current.settings.zone) ? dateAt(new Date(start),current.settings.zone)+' '+fmt(start)+' – '+dateAt(new Date(end),current.settings.zone)+' '+fmt(end) : fmt(start)+'–'+fmt(end);
 const status = (message, error = false) => {
   $('status').textContent = message;
   $('status').classList.toggle('error', error);
@@ -17,6 +20,7 @@ const status = (message, error = false) => {
 function preset() {
   if (!$('site').value || $('site').value === 'custom') return;
   const {lat, lon, zone} = locations[Number($('site').value)];
+  if(Number($('lat').value)!==lat||Number($('lon').value)!==lon)$('use-horizon').checked=false;
   $('lat').value = lat;
   $('lon').value = lon;
   $('zone').value = zone;
@@ -37,6 +41,10 @@ function build() {
     name, zone, date: $('date').value,
     lat: $('lat').valueAsNumber, lon: $('lon').valueAsNumber,
     threshold: Number($('alt').value),
+    horizon:$('use-horizon').checked?parseHorizon($('horizon-points').value):[],
+    horizonMargin:Number($('horizon-margin').value),
+    horizonName:$('horizon-name').value.trim(),
+    moonSeparation:Number($('moon-separation').value),
     sensor: $('sensor').value.split(',').map(Number),
     focal: $('focal').valueAsNumber,
   };
@@ -92,6 +100,8 @@ function renderSessions() {
     row.insertCell().textContent = bearing(session.azimuth) + ' ' + degrees(session.azimuth) + ' · ' + degrees(session.altitude) + ' high';
     row.insertCell().textContent = degrees(session.floor);
     row.insertCell().textContent = degrees(session.moonHigh);
+    row.insertCell().textContent = session.moonSeparationFloor===null?'Unavailable':degrees(session.moonSeparationFloor);
+    row.insertCell().textContent = degrees(session.clearanceFloor);
     return row;
   });
   $('session-rows').replaceChildren(...rows);
@@ -162,6 +172,7 @@ function renderTargets() {
     row.insertCell().textContent = fmt(item.best.t) + ' · ' + bearing(item.best.azimuth) + ' ' + degrees(item.best.azimuth);
     row.insertCell().textContent = degrees(item.best.altitude);
     row.insertCell().textContent = item.windows.map(span).join(', ') || 'Below cutoff or no darkness';
+    row.insertCell().textContent = item.id==='Moon'?'Target is the Moon':degrees(item.best.moonSeparation);
     row.insertCell().textContent = framing(item);
     return row;
   }));
@@ -198,12 +209,12 @@ function graph() {
     g.fillText(fmt(t), Math.max(left, Math.min(right - 15, x(t))), h - 6);
   }
   const target = current.paths[$('target').value];
-  for (const [key, color] of [['sun','#a34729'], ['moon','#75509b'], ['target','#326742']]) {
+  for (const [key, color] of [['sun','#a34729'], ['moon','#75509b'], ['target','#326742'],['horizon','#926b25']]) {
     g.strokeStyle = color;
     g.lineWidth = 2;
     g.beginPath();
     points.forEach((row, i) => {
-      const py = y(key === 'target' ? target[i].altitude : row[key]);
+      const py = y(key==='horizon'?horizonAt(current.settings.horizon,target[i].azimuth)+(current.settings.horizon?.length?current.settings.horizonMargin:0):key === 'target' ? target[i].altitude : row[key]);
       if (i) g.lineTo(x(row.t), py);
       else g.moveTo(x(row.t), py);
     });
@@ -218,7 +229,9 @@ function graph() {
   $('time').setAttribute('aria-valuetext', fmt(p.t));
   $('values').textContent = fmt(p.t) + ' · Sun ' + degrees(p.sun) +
     ' · Moon ' + degrees(p.moon) + ' · ' + $('target').selectedOptions[0].text +
-    ' ' + degrees(selected.altitude) + ' ' + bearing(selected.azimuth);
+    ' ' + degrees(selected.altitude) + ' ' + bearing(selected.azimuth) + ' · Obstruction ' + degrees(horizonAt(current.settings.horizon,selected.azimuth)) + ' · Clearance above observing cutoff '+degrees(clearance(selected,current.settings))+' · Moon separation '+degrees(selected.moonSeparation);
+  const summary=current.targets.find(t=>t.id===$('target').value);
+  $('visibility').textContent='Above your obstruction and safety margin: '+(summary.visibleWindows.length?summary.visibleWindows.map(span).join(' · '):'No clear sample in this noon-to-noon period')+'. These geometric visibility windows ignore darkness and your minimum observing altitude. Dark observing windows are listed below.';
 }
 
 function showLocations() {
@@ -246,7 +259,7 @@ $('region').addEventListener('change', showLocations);
 $('edition').textContent = sourceDate;
 showLocations();
 $('site').addEventListener('change', preset);
-for (const field of ['lat','lon','zone']) $(field).addEventListener('input', () => { $('site').value = 'custom'; });
+for (const field of ['lat','lon','zone']) $(field).addEventListener('input', () => { $('site').value = 'custom';$('use-horizon').checked=false;$('horizon-status').textContent='Location changed. Re-enable or load the appropriate horizon profile for this site.'; });
 $('planner').addEventListener('submit', event => {
   event.preventDefault();
   try { build(); } catch (error) { status(error.message, true); $('results').hidden = true; }
@@ -267,3 +280,10 @@ $('export').addEventListener('click', () => {
 window.addEventListener('load', () => {
   try { build(); } catch (error) {status(error.message, true);}
 }, {once:true});
+
+function showProfiles(){const before=$('saved-horizons').value;$('saved-horizons').replaceChildren(new Option('Choose a saved site…',''),...profiles.map((p,i)=>new Option(p.name,String(i))));if(profiles[Number(before)]&&before!=='')$('saved-horizons').value=before;}
+function persistProfiles(){try{localStorage.setItem(horizonKey,JSON.stringify(profiles));return true;}catch{$('horizon-status').textContent='Browser storage is unavailable. The active horizon still works for this visit; export the plan to keep it.';return false;}}
+$('save-horizon').onclick=()=>{try{parseHorizon($('horizon-points').value);const name=$('horizon-name').value.trim();if(!name)throw Error('Name this horizon profile first.');const lat=$('lat').valueAsNumber,lon=$('lon').valueAsNumber,zone=$('zone').value.trim();const p={name,lat,lon,zone,text:$('horizon-points').value,margin:Number($('horizon-margin').value),moonSeparation:Number($('moon-separation').value)};readProfiles(JSON.stringify([p]));const index=profiles.findIndex(p=>p.name===name);if(index>=0)profiles[index]=p;else{if(profiles.length>=20)throw Error('Remove a saved profile before adding more than 20.');profiles.push(p);}showProfiles();if(persistProfiles())$('horizon-status').textContent='Saved this horizon and observing coordinates only in this browser. A profile with the same name is replaced.';}catch(e){$('horizon-status').textContent=e.message;}};
+$('load-horizon').onclick=()=>{if($('saved-horizons').value==='')return;const p=profiles[Number($('saved-horizons').value)];if(!p)return;$('horizon-name').value=p.name;$('horizon-points').value=p.text;$('horizon-margin').value=String(p.margin??2);$('moon-separation').value=String(p.moonSeparation??0);$('lat').value=p.lat;$('lon').value=p.lon;$('zone').value=p.zone;$('site').value='custom';$('use-horizon').checked=true;$('horizon-status').textContent='Loaded '+p.name+'. Calculate sky to apply this saved site and horizon.';};
+$('delete-horizon').onclick=()=>{if($('saved-horizons').value==='')return;profiles.splice(Number($('saved-horizons').value),1);showProfiles();if(persistProfiles())$('horizon-status').textContent='Removed the saved profile. The current form is unchanged.';};
+showProfiles();

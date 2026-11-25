@@ -1,3 +1,4 @@
+import {horizonAt,clearance,separation,moonAllowed} from './horizon.mjs';
 const minute = 60_000;
 const rad = Math.PI / 180;
 const entries = [
@@ -102,13 +103,14 @@ function darkIntervals(samples) {
 
 const maxAltitude = rows => rows.reduce((best, row) => row.altitude > best.altitude ? row : best);
 
-function targetSummary(samples, points, threshold, target) {
+function targetSummary(samples, points, settings, target) {
   const darkPoints = points.filter((row, i) => samples[i].sun < -18);
-  const best = maxAltitude(darkPoints.length ? darkPoints : points);
+  const usable = points.filter((row,i)=>samples[i].sun < -18 && clearance(row,settings)>=0 && moonAllowed(row,samples[i],settings.moonSeparation,target.id));
+  const best = maxAltitude(usable.length ? usable : darkPoints.length ? darkPoints : points);
   const windows = [];
   let start = null;
   for (let i = 0; i < points.length; i++) {
-    const eligible = samples[i].sun < -18 && points[i].altitude >= threshold;
+    const eligible = samples[i].sun < -18 && clearance(points[i],settings)>=0 && moonAllowed(points[i],samples[i],settings.moonSeparation,target.id);
     if (eligible && start == null) start = i;
     if (start != null && (!eligible || i === points.length - 1)) {
       const finish = eligible ? i : i - 1;
@@ -122,7 +124,13 @@ function targetSummary(samples, points, threshold, target) {
     width = 2 * Math.asin(1737.4 / (best.distance * 149_597_870.7)) / rad;
     height = width;
   }
-  return {...target, width, height, best, windows};
+  const visibleWindows=[];start=null;
+  for(let i=0;i<points.length;i++){
+    const eligible=points[i].altitude>=horizonAt(settings.horizon,points[i].azimuth)+(settings.horizon?.length?settings.horizonMargin||0:0);
+    if(eligible&&start===null)start=i;
+    if(start!==null&&(!eligible||i===points.length-1)){const finish=eligible?i:i-1;visibleWindows.push([points[start].t,points[finish].t]);start=null;}
+  }
+  return {...target, width, height, best, windows, visibleWindows};
 }
 
 export function plan(engine, settings) {
@@ -136,13 +144,14 @@ export function plan(engine, settings) {
     const rotation = engine.Rotation_EQJ_EQD(time);
     const solar = position(engine, {name: 'Sun'}, time, observer, rotation);
     for (const target of targets) paths[target.id].push({t, ...position(engine, target, time, observer, rotation)});
-    samples.push({t, sun: solar.altitude, moon: paths.Moon.at(-1).altitude});
+    const moon=paths.Moon.at(-1);for(const target of targets){const point=paths[target.id].at(-1);point.moonSeparation=separation(point,moon);point.horizon=horizonAt(settings.horizon,point.azimuth);}
+    samples.push({t, sun: solar.altitude, moon: moon.altitude});
     if (t === end) break;
   }
   const middle = new Date((start + end) / 2);
   const moonPhase = engine.MoonPhase(middle);
   const moonLight = engine.Illumination('Moon', middle).phase_fraction;
-  const summary = targets.map(target => targetSummary(samples, paths[target.id], threshold, target));
+  const summary = targets.map(target => targetSummary(samples, paths[target.id], settings, target));
   summary.sort((a,b) => Number(Boolean(b.windows.length)) - Number(Boolean(a.windows.length)) || b.best.altitude - a.best.altitude);
   return {settings, samples, paths, dark: darkIntervals(samples), frame: frame(sensor, focal), moonPhase, moonLight, targets: summary};
 }
@@ -157,22 +166,24 @@ export function observingSessions(sky, duration, moonBelow) {
     for (let start = 0; start + steps < path.length; start++) {
       const end = start + steps;
       if (path[end].t - path[start].t !== duration * minute) continue;
-      let floor = Infinity, moonHigh = -Infinity;
+      let floor = Infinity, moonHigh = -Infinity, clearanceFloor=Infinity, moonSeparationFloor=Infinity;
       for (let i = start; i <= end; i++) {
         const {sun, moon} = sky.samples[i];
-        if (sun >= -18 || (moonBelow && moon >= 0) || path[i].altitude < sky.settings.threshold) {
+        if (sun >= -18 || (moonBelow && moon >= 0) || clearance(path[i],sky.settings)<0 || !moonAllowed(path[i],sky.samples[i],sky.settings.moonSeparation,target.id)) {
           floor = -Infinity;
           break;
         }
         floor = Math.min(floor, path[i].altitude);
+        clearanceFloor=Math.min(clearanceFloor,clearance(path[i],sky.settings));
+        if(Number.isFinite(path[i].moonSeparation))moonSeparationFloor=Math.min(moonSeparationFloor,path[i].moonSeparation);
         moonHigh = Math.max(moonHigh, moon);
       }
-      if (Number.isFinite(floor) && (!best || floor > best.floor)) {
+      if (Number.isFinite(floor) && (!best || clearanceFloor > best.clearanceFloor)) {
         best = {id: target.id, name: target.name, start: path[start].t, end: path[end].t,
-          startIndex: start, altitude: path[start].altitude, azimuth: path[start].azimuth, floor, moonHigh};
+          startIndex: start, altitude: path[start].altitude, azimuth: path[start].azimuth, floor, moonHigh, clearanceFloor, moonSeparationFloor:Number.isFinite(moonSeparationFloor)?moonSeparationFloor:null};
       }
     }
     if (best) sessions.push(best);
   }
-  return sessions.sort((a, b) => b.floor - a.floor || a.name.localeCompare(b.name));
+  return sessions.sort((a, b) => b.clearanceFloor - a.clearanceFloor || a.name.localeCompare(b.name));
 }

@@ -5,7 +5,7 @@
 A calculated Langley or Halifax plan opens [Crater Light](https://coolcode.ca/otherworldnames/crater-light/?feature=1296) for Copernicus at the same observing site and local date. The planner uses the USGS lunar Gazetteer and JPL Horizons geometry. Custom coordinates stay in Nightfinder.
 
 <!-- coolcode:guide -->
-Choose a location to calculate seven days of golden light (Sun −4° to +6°) and blue light (−6° to −4°), alongside dark-sky target sessions. Optionally load cloud-cover forecasts for those windows; that click sends coordinates to Open-Meteo. Download the plan to retain the calculated windows.
+Save a named balcony/building horizon to find when a target clears it, constrain Moon separation, and calculate seven days of golden light (Sun −4° to +6°) and blue light (−6° to −4°), alongside dark-sky target sessions. Optionally load cloud-cover forecasts for those windows; that click sends coordinates to Open-Meteo. Download the plan to retain the calculated windows.
 <!-- /coolcode:guide -->
 
 The catalogue card is maintained in [tool.json](tool.json). Its practical example appears in the marked excerpt above.
@@ -22,9 +22,19 @@ Run `node --test tests/*.test.mjs` to check session selection. Run `python3 scri
 
 ## Methods
 
-Astronomy Engine evaluates the Sun, Moon and planets. A small curated J2000 catalogue contains standard positions and approximate angular sizes for common imaging targets, with object designations searchable in [SIMBAD](https://simbad.cds.unistra.fr/simbad/). Positions use a geometric horizon and samples every six minutes. The session finder checks every sample including both ends, and retains the earliest block in an exact altitude tie. A session ends on the following local date when it crosses midnight. The export records the duration, Moon setting and UTC millisecond bounds of each recommendation. Dark intervals interpolate Sun altitude at −18°. Target windows use the altitude filter and a sampled dark period. Framing assumes a rectilinear lens and the ability to rotate the camera. Weather and actual terrain visibility need a separate check. Forecasts are linked from the app.
+Astronomy Engine evaluates the Sun, Moon and planets. A small curated J2000 catalogue contains standard positions and approximate angular sizes for common imaging targets, with object designations searchable in [SIMBAD](https://simbad.cds.unistra.fr/simbad/). Positions use a geometric horizon and samples every six minutes. The session finder checks every sample including both ends, and retains the earliest block in an exact clearance tie. A session ends on the following local date when it crosses midnight. The export records the duration, Moon setting and UTC millisecond bounds of each recommendation. Dark intervals interpolate Sun altitude at −18°. Target windows use the altitude filter and a sampled dark period. Framing assumes a rectilinear lens and the ability to rotate the camera. Weather and actual terrain visibility need a separate check. Forecasts are linked from the app.
 
 
 ## Added browser workflow
 
 Choose a location to calculate seven days of golden light (Sun −4° to +6°) and blue light (−6° to −4°), alongside dark-sky target sessions. Optionally load cloud-cover forecasts for those windows; that click sends coordinates to Open-Meteo. Download the plan to retain the calculated windows.
+
+## Saved horizons and Moon separation
+
+Open **Your balcony, buildings and local horizon**. Enter azimuth/obstruction-altitude pairs (degrees), for example `0, 10`, `90, 40`, `180, 10`, `270, 5`. Azimuth is clockwise from true north. The app linearly interpolates between points and across north; use points close together at building edges. A single point defines a flat obstruction. Values must be 0–360° azimuth and 0–90° obstruction height. Enable the profile, choose extra clearance, then calculate.
+
+**Save site and horizon** keeps up to 20 named profiles with latitude, longitude and time zone in namespaced localStorage. Saving an existing name replaces that profile. **Load saved site** restores it; changing location disables the active profile to avoid applying one balcony to another town. Saved values never leave the browser. Exported JSON plans include the applied profile, clearance and constraints.
+
+The chart reports the target's sampled geometric visibility above the obstruction separately from dark observing windows. Observing windows meet the maximum of your altitude cutoff and obstruction plus clearance. A requested Moon separation applies while the Moon is above the geometric horizon, except to the Moon itself. Angular separation uses topocentric horizontal directions through the spherical cosine rule; it is independent of phase and is not a sky-brightness estimate. The best continuous block maximizes its lowest clearance above the combined cutoff, with the earliest block winning exact ties. Existing sensor/focal-length camera framing and photography windows remain intact.
+
+Sampling is every six minutes; a narrow obstacle or brief opening can be missed. No atmospheric refraction or automatic terrain model is used. All calculations remain local using the pinned [Astronomy Engine](https://github.com/cosinekitty/astronomy/blob/master/source/js/README.md); no additional key, service or scheduled collector is required.

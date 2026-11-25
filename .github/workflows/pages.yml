@@ -3,6 +3,7 @@ name: Build and publish to GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -21,6 +22,7 @@ jobs:
         with:
           persist-credentials: false
       - uses: actions/configure-pages@v5
+        if: github.event_name != 'pull_request'
       - name: Build the static application
         run: |
           if test -f requirements.txt; then
@@ -32,11 +34,21 @@ jobs:
           test -s dist/index.html
       - name: Test application logic
         run: node --test tests/*.test.mjs
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install browser check dependencies
+        run: |
+          python3 -m pip install -r tests/browser-requirements.txt
+          python3 -m playwright install --with-deps chromium
+      - name: Check horizon persistence and mobile layout
+        run: python3 tests/browser_smoke.py
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
   deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10

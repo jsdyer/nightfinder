@@ -1,7 +1,7 @@
 {
   "id": "nightfinder",
   "title": "Nightfinder",
-  "description": "Plan dark-sky sessions, camera framing and seven days of golden and blue-hour photography windows.",
+  "description": "Plan observing windows around your balcony horizon and Moon separation, with camera framing and golden-hour timing.",
   "category": "field-kit",
   "tags": [
     "astronomy",
@@ -12,7 +12,10 @@
     "astrophotography",
     "Canada",
     "night sky",
-    "observing sites"
+    "observing sites",
+    "obstructions",
+    "horizon",
+    "Moon separation"
   ],
   "icon": "telescope",
   "url": "/nightfinder/",
