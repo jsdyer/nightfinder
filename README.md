@@ -5,10 +5,10 @@
 A calculated Langley or Halifax plan opens [Crater Light](https://coolcode.ca/otherworldnames/crater-light/?feature=1296) for Copernicus at the same observing site and local date. The planner uses the USGS lunar Gazetteer and JPL Horizons geometry. Custom coordinates stay in Nightfinder.
 
 <!-- coolcode:guide -->
-Read the opening summary for the selected site’s dark hours and Moon phase. Choose your community or open [tonight at Peggy’s Cove](https://coolcode.ca/nightfinder/?photo_place=peggys-cove#sky-summary).
-Save a named balcony/building horizon to find when a target clears it, constrain Moon separation, and calculate seven days of golden light (Sun −4° to +6°) and blue light (−6° to −4°), alongside dark-sky target sessions. Optionally load cloud-cover forecasts for those windows; that click sends coordinates to Open-Meteo. Download the plan to retain the calculated windows.
-Choose the Peggy’s Cove or Stanley Park photography preset, then load the optional cloud forecast and set a maximum cloud cover for observing sessions. Saved locations preserve whether a horizon obstruction is enabled.
+Read the opening summary for your site’s dark hours and Moon phase, then change the community or date. Save a local horizon to find when a target clears your balcony, set a minimum Moon separation or check a week of golden and blue light. Cloud forecasts are optional and send the selected coordinates to Open-Meteo.
 <!-- /coolcode:guide -->
+
+[See tonight’s sky at Peggy’s Cove](https://coolcode.ca/nightfinder/?photo_place=peggys-cove#sky-summary).
 
 The catalogue card is maintained in [tool.json](tool.json). Its practical example appears in the marked excerpt above.
 
