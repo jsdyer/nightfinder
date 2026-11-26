@@ -52,7 +52,7 @@ function build() {
   const photoPlace=photoPlaces.find(p=>p.lat===settings.lat&&p.lon===settings.lon&&p.zone===settings.zone);
   $('photo-place').value=photoPlace?.id||'';
   $('photo-place-note').textContent=photoPlace?.note||'';
-  $('photo-place-source').hidden=!photoPlace;
+  $('photo-place-source').hidden=!photoPlace;if(photoPlace)$('photo-place-source').href=photoPlace.source;
   const tideLink=new URL('https://coolcode.ca/tide-and-dark/');
   if(photoPlace)tideLink.searchParams.set('photo_place',photoPlace.id);
   tideLink.searchParams.set('day_date',settings.date);tideLink.searchParams.set('mode','day');$('tide-link').href=tideLink.href;
@@ -281,7 +281,7 @@ $('time').addEventListener('input', graph);
 new ResizeObserver(graph).observe($('graph'));
 $('export').addEventListener('click', () => {
   const {settings, dark, frame, moonPhase, moonLight, targets} = current;
-  const record = {settings, photography:photoWindows.map(w=>({...w,cloudCoverPercent:cloudForWindow(cloudHourly,w)})), sessionMinutes: Number($('duration').value), requireMoonBelow: $('moon-rule').value === 'down', sessions, dark, frame, moonPhase, moonLight, targets, timing:'Unix milliseconds, UTC', source:'Astronomy Engine 2.1.19; fixed J2000 object catalogue; optional Open-Meteo forecast'};
+  const record = {settings, photography:photoWindows.map(w=>({...w,cloudCoverPercent:cloudForWindow(cloudHourly,w)})), maximumForecastCloudPercent:$('session-cloud').value==='any'?null:Number($('session-cloud').value), sessionMinutes: Number($('duration').value), requireMoonBelow: $('moon-rule').value === 'down', sessions, dark, frame, moonPhase, moonLight, targets, timing:'Unix milliseconds, UTC', source:'Astronomy Engine 2.1.19; fixed J2000 object catalogue; optional Open-Meteo forecast'};
   const href = URL.createObjectURL(new Blob([JSON.stringify(record, null, 2)], {type:'application/json'}));
   const a = Object.assign(document.createElement('a'), {href, download:'nightfinder-' + settings.date + '.json'});
   a.click();
