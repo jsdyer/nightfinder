@@ -35,8 +35,17 @@ export function photographyWeek(engine, settings) {
   }
   return windows;
 }
-export function cloudForWindow(hourly, window) {
-  const indices=(hourly?.time??[]).map((t,i)=>({t:t*1000,i})).filter(x=>x.t>=window.start-1800000 && x.t<=window.end+1800000);
-  const values=indices.map(x=>hourly.cloud_cover?.[x.i]).filter(x=>Number.isFinite(x));
-  return values.length?Math.round(values.reduce((a,b)=>a+b,0)/values.length):null;
+// Hourly values represent a nearest-hour band. Require uninterrupted coverage of the
+// full requested window; never average a partial forecast into an apparent clear night.
+export function cloudSummary(hourly, window) {
+ if(!Number.isFinite(window.start)||!Number.isFinite(window.end)||window.end<=window.start)return null;
+ const points=(hourly?.time??[]).map((t,i)=>({t:t*1000,v:hourly.cloud_cover?.[i]})).filter(p=>Number.isFinite(p.t)).sort((a,b)=>a.t-b.t);
+ let covered=window.start,weighted=0,total=0,maximum=0;
+ for(const p of points){const start=Math.max(window.start,p.t-1800000),end=Math.min(window.end,p.t+1800000);if(end<=start||end<=covered)continue;
+  if(start>covered+1||typeof p.v!=='number'||!Number.isFinite(p.v)||p.v<0||p.v>100)return null;
+  const weight=end-Math.max(start,covered);weighted+=p.v*weight;total+=weight;maximum=Math.max(maximum,p.v);covered=end;
+  if(covered>=window.end)return {mean:Math.round(weighted/total),maximum};
+ }
+ return null;
 }
+export function cloudForWindow(hourly, window){return cloudSummary(hourly,window)?.mean??null;}

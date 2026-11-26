@@ -156,7 +156,7 @@ export function plan(engine, settings) {
   return {settings, samples, paths, dark: darkIntervals(samples), frame: frame(sensor, focal), moonPhase, moonLight, targets: summary};
 }
 
-export function observingSessions(sky, duration, moonBelow) {
+export function observingSessions(sky, duration, moonBelow, cloud = null) {
   const steps = duration / 6;
   if (!Number.isInteger(steps) || steps <= 0) return [];
   const sessions = [];
@@ -178,9 +178,11 @@ export function observingSessions(sky, duration, moonBelow) {
         if(Number.isFinite(path[i].moonSeparation))moonSeparationFloor=Math.min(moonSeparationFloor,path[i].moonSeparation);
         moonHigh = Math.max(moonHigh, moon);
       }
+      let clouds=null;
+      if(Number.isFinite(floor)&&cloud){clouds=cloud.summary({start:path[start].t,end:path[end].t});if(!clouds||clouds.maximum>cloud.maximum)continue;}
       if (Number.isFinite(floor) && (!best || clearanceFloor > best.clearanceFloor)) {
         best = {id: target.id, name: target.name, start: path[start].t, end: path[end].t,
-          startIndex: start, altitude: path[start].altitude, azimuth: path[start].azimuth, floor, moonHigh, clearanceFloor, moonSeparationFloor:Number.isFinite(moonSeparationFloor)?moonSeparationFloor:null};
+          startIndex: start, altitude: path[start].altitude, azimuth: path[start].azimuth, floor, moonHigh, clearanceFloor, moonSeparationFloor:Number.isFinite(moonSeparationFloor)?moonSeparationFloor:null,clouds};
       }
     }
     if (best) sessions.push(best);

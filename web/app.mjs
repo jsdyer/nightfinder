@@ -1,7 +1,8 @@
 import {parseHorizon,horizonAt,clearance,readProfiles} from './horizon.mjs';
 import {bearing, dateAt, plan, observingSessions} from './model.mjs';
 import {locations, matchingLocations, regions, sourceDate} from './location-search.mjs';
-import {photographyWeek, cloudForWindow} from './photography.mjs';
+import {photoPlaces} from './photo-places.mjs';
+import {photographyWeek, cloudForWindow, cloudSummary} from './photography.mjs';
 const $ = id => document.getElementById(id);
 let current = null;
 let clock = null;
@@ -36,7 +37,7 @@ function build() {
   } catch {
     throw new Error('Enter a valid IANA time zone, such as America/Halifax.');
   }
-  const name = $('site').value === 'custom' ? 'Custom site' : locations[Number($('site').value)].name;
+  const name = $('site').value === 'custom' ? ($('horizon-name').value.trim() || 'Custom site') : locations[Number($('site').value)].name;
   const settings = {
     name, zone, date: $('date').value,
     lat: $('lat').valueAsNumber, lon: $('lon').valueAsNumber,
@@ -48,6 +49,13 @@ function build() {
     sensor: $('sensor').value.split(',').map(Number),
     focal: $('focal').valueAsNumber,
   };
+  const photoPlace=photoPlaces.find(p=>p.lat===settings.lat&&p.lon===settings.lon&&p.zone===settings.zone);
+  $('photo-place').value=photoPlace?.id||'';
+  $('photo-place-note').textContent=photoPlace?.note||'';
+  $('photo-place-source').hidden=!photoPlace;
+  const tideLink=new URL('https://coolcode.ca/tide-and-dark/');
+  if(photoPlace)tideLink.searchParams.set('photo_place',photoPlace.id);
+  tideLink.searchParams.set('day_date',settings.date);tideLink.searchParams.set('mode','day');$('tide-link').href=tideLink.href;
   current = plan(globalThis.Astronomy, settings);
   photoWindows = photographyWeek(globalThis.Astronomy, settings);
   cloudHourly = null; cloudRequest++;
@@ -80,12 +88,13 @@ function build() {
 function renderSessions() {
   if (!current) return;
   const duration = Number($('duration').value), moonBelow = $('moon-rule').value === 'down';
-  sessions = observingSessions(current, duration, moonBelow);
+  const maximum=$('session-cloud').value;
+  sessions = observingSessions(current, duration, moonBelow,maximum==='any'?null:{maximum:Number(maximum),summary:window=>cloudSummary(cloudHourly,window)});
   const stamp = new Intl.DateTimeFormat('en-CA', {timeZone: current.settings.zone, month: 'short', day: 'numeric',
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZoneName: 'shortOffset'});
   $('session-status').textContent = sessions.length
     ? sessions.length + ' targets have a continuous ' + duration + '-minute window. Select a target to inspect its start on the chart.'
-    : 'No target has a continuous ' + duration + '-minute window with these settings. Try a shorter session, a different Moon constraint or another night.';
+    : (maximum!=='any'&&!cloudHourly?'Load a cloud forecast, or choose Ignore cloud forecast. ':'')+'No target has a continuous ' + duration + '-minute window with these settings. Try a shorter session, a different Moon constraint or another night.';
   const rows = sessions.map(session => {
     const row = document.createElement('tr'), button = document.createElement('button');
     button.type = 'button'; button.textContent = session.name;
@@ -102,6 +111,7 @@ function renderSessions() {
     row.insertCell().textContent = degrees(session.moonHigh);
     row.insertCell().textContent = session.moonSeparationFloor===null?'Unavailable':degrees(session.moonSeparationFloor);
     row.insertCell().textContent = degrees(session.clearanceFloor);
+    const clouds=session.clouds||cloudSummary(cloudHourly,session);row.insertCell().textContent=clouds?clouds.mean+'% average · '+clouds.maximum+'% maximum':'No complete forecast';
     return row;
   });
   $('session-rows').replaceChildren(...rows);
@@ -134,7 +144,7 @@ $('load-clouds').addEventListener('click',async()=>{
     const data=await response.json();
     if(!Array.isArray(data.hourly?.time)||!Array.isArray(data.hourly?.cloud_cover))throw Error('Cloud forecast is unavailable.');
     if(token!==cloudRequest)return;
-    cloudHourly=data.hourly;renderPhotography();
+    cloudHourly=data.hourly;renderPhotography();renderSessions();
     $('cloud-status').textContent='Open-Meteo cloud forecast retrieved '+new Date().toISOString()+'. Windows outside the forecast period have no cloud value. Lower cloud cover may help, but does not guarantee clear skies.';
   } catch(error) { if(token===cloudRequest)$('cloud-status').textContent=error.message+' Solar windows remain available.'; }
   finally {if(token===cloudRequest)$('load-clouds').disabled=false;}
@@ -266,7 +276,7 @@ $('planner').addEventListener('submit', event => {
 });
 $('target').addEventListener('change', () => {renderTargets(); graph();});
 $('category').addEventListener('change', renderTargets);
-for (const id of ['duration','moon-rule']) $(id).addEventListener('change', renderSessions);
+for (const id of ['duration','moon-rule','session-cloud']) $(id).addEventListener('change', renderSessions);
 $('time').addEventListener('input', graph);
 new ResizeObserver(graph).observe($('graph'));
 $('export').addEventListener('click', () => {
@@ -283,7 +293,12 @@ window.addEventListener('load', () => {
 
 function showProfiles(){const before=$('saved-horizons').value;$('saved-horizons').replaceChildren(new Option('Choose a saved site…',''),...profiles.map((p,i)=>new Option(p.name,String(i))));if(profiles[Number(before)]&&before!=='')$('saved-horizons').value=before;}
 function persistProfiles(){try{localStorage.setItem(horizonKey,JSON.stringify(profiles));return true;}catch{$('horizon-status').textContent='Browser storage is unavailable. The active horizon still works for this visit; export the plan to keep it.';return false;}}
-$('save-horizon').onclick=()=>{try{parseHorizon($('horizon-points').value);const name=$('horizon-name').value.trim();if(!name)throw Error('Name this horizon profile first.');const lat=$('lat').valueAsNumber,lon=$('lon').valueAsNumber,zone=$('zone').value.trim();const p={name,lat,lon,zone,text:$('horizon-points').value,margin:Number($('horizon-margin').value),moonSeparation:Number($('moon-separation').value)};readProfiles(JSON.stringify([p]));const index=profiles.findIndex(p=>p.name===name);if(index>=0)profiles[index]=p;else{if(profiles.length>=20)throw Error('Remove a saved profile before adding more than 20.');profiles.push(p);}showProfiles();if(persistProfiles())$('horizon-status').textContent='Saved this horizon and observing coordinates only in this browser. A profile with the same name is replaced.';}catch(e){$('horizon-status').textContent=e.message;}};
-$('load-horizon').onclick=()=>{if($('saved-horizons').value==='')return;const p=profiles[Number($('saved-horizons').value)];if(!p)return;$('horizon-name').value=p.name;$('horizon-points').value=p.text;$('horizon-margin').value=String(p.margin??2);$('moon-separation').value=String(p.moonSeparation??0);$('lat').value=p.lat;$('lon').value=p.lon;$('zone').value=p.zone;$('site').value='custom';$('use-horizon').checked=true;$('horizon-status').textContent='Loaded '+p.name+'. Calculate sky to apply this saved site and horizon.';};
+$('save-horizon').onclick=()=>{try{parseHorizon($('horizon-points').value);const name=$('horizon-name').value.trim();if(!name)throw Error('Name this horizon profile first.');const lat=$('lat').valueAsNumber,lon=$('lon').valueAsNumber,zone=$('zone').value.trim();const p={name,lat,lon,zone,text:$('horizon-points').value,enabled:$('use-horizon').checked,margin:Number($('horizon-margin').value),moonSeparation:Number($('moon-separation').value)};readProfiles(JSON.stringify([p]));const index=profiles.findIndex(p=>p.name===name);if(index>=0)profiles[index]=p;else{if(profiles.length>=20)throw Error('Remove a saved profile before adding more than 20.');profiles.push(p);}showProfiles();if(persistProfiles())$('horizon-status').textContent='Saved this horizon and observing coordinates only in this browser. A profile with the same name is replaced.';}catch(e){$('horizon-status').textContent=e.message;}};
+$('load-horizon').onclick=()=>{if($('saved-horizons').value==='')return;const p=profiles[Number($('saved-horizons').value)];if(!p)return;$('horizon-name').value=p.name;$('horizon-points').value=p.text;$('horizon-margin').value=String(p.margin??2);$('moon-separation').value=String(p.moonSeparation??0);$('lat').value=p.lat;$('lon').value=p.lon;$('zone').value=p.zone;$('site').value='custom';$('use-horizon').checked=p.enabled!==false;$('horizon-status').textContent='Loaded '+p.name+'. Calculate sky to apply this saved site and horizon.';};
 $('delete-horizon').onclick=()=>{if($('saved-horizons').value==='')return;profiles.splice(Number($('saved-horizons').value),1);showProfiles();if(persistProfiles())$('horizon-status').textContent='Removed the saved profile. The current form is unchanged.';};
 showProfiles();
+
+for(const p of photoPlaces)$('photo-place').add(new Option(p.name,p.id));
+function usePhotoPlace(id){const p=photoPlaces.find(x=>x.id===id);if(!p)return;$('photo-place').value=p.id;$('site').value='custom';$('lat').value=p.lat;$('lon').value=p.lon;$('zone').value=p.zone;$('horizon-name').value=p.name;$('use-horizon').checked=false;$('photo-place-note').textContent=p.note;$('photo-place-source').href=p.source;$('photo-place-source').hidden=false;$('horizon-status').textContent='Photography preset loaded. Save site and horizon to keep this location in this browser.';const link=new URL('https://coolcode.ca/tide-and-dark/');link.search=new URLSearchParams({photo_place:p.id,day_date:$('date').value,mode:'day'});$('tide-link').href=link.href;}
+$('photo-place').onchange=()=>{usePhotoPlace($('photo-place').value);try{build();}catch(e){status(e.message,true)}};
+const query=new URLSearchParams(location.search);if(photoPlaces.some(p=>p.id===query.get('photo_place'))){usePhotoPlace(query.get('photo_place'));const day=query.get('date');if(/^\d{4}-\d{2}-\d{2}$/.test(day||'')&&day>='1900-01-01'&&day<='2100-12-30')$('date').value=day;}

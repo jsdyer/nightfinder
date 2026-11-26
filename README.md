@@ -6,6 +6,7 @@ A calculated Langley or Halifax plan opens [Crater Light](https://coolcode.ca/ot
 
 <!-- coolcode:guide -->
 Save a named balcony/building horizon to find when a target clears it, constrain Moon separation, and calculate seven days of golden light (Sun −4° to +6°) and blue light (−6° to −4°), alongside dark-sky target sessions. Optionally load cloud-cover forecasts for those windows; that click sends coordinates to Open-Meteo. Download the plan to retain the calculated windows.
+Choose the Peggy’s Cove or Stanley Park photography preset, then load the optional cloud forecast and set a maximum cloud cover for observing sessions. Saved locations preserve whether a horizon obstruction is enabled.
 <!-- /coolcode:guide -->
 
 The catalogue card is maintained in [tool.json](tool.json). Its practical example appears in the marked excerpt above.
@@ -38,3 +39,11 @@ Open **Your balcony, buildings and local horizon**. Enter azimuth/obstruction-al
 The chart reports the target's sampled geometric visibility above the obstruction separately from dark observing windows. Observing windows meet the maximum of your altitude cutoff and obstruction plus clearance. A requested Moon separation applies while the Moon is above the geometric horizon, except to the Moon itself. Angular separation uses topocentric horizontal directions through the spherical cosine rule; it is independent of phase and is not a sky-brightness estimate. The best continuous block maximizes its lowest clearance above the combined cutoff, with the earliest block winning exact ties. Existing sensor/focal-length camera framing and photography windows remain intact.
 
 Sampling is every six minutes; a narrow obstacle or brief opening can be missed. No atmospheric refraction or automatic terrain model is used. All calculations remain local using the pinned [Astronomy Engine](https://github.com/cosinekitty/astronomy/blob/master/source/js/README.md); no additional key, service or scheduled collector is required.
+
+## Coastal photography and forecast coverage
+
+Peggy’s Cove (Peggys Point lighthouse) and Stanley Park (approximate centre) are configured in `web/photo-places.mjs`, with official coordinate sources and regional tide-reference notes. Coordinates remain editable; a preset is not a claim about access, an unobstructed horizon or the best camera position. `?photo_place=peggys-cove&date=2026-11-26` and `?photo_place=stanley-park` are shareable entry points. Tide & Dark uses the same IDs.
+
+The existing saved-site profiles now retain their enabled/disabled obstruction state. Save a location with **Apply this obstruction profile** unchecked to keep coordinates without inventing a horizon. Older saved profiles load as enabled for backward compatibility. All named profiles stay in local browser storage and can be deleted.
+
+**Maximum forecast cloud** filters every candidate observing block, not just the previously selected best block. It requires uninterrupted hourly forecast coverage and checks the maximum hourly cloud amount, then chooses the eligible block with the highest minimum target clearance. Unloaded, missing, invalid or out-of-range forecast hours cannot qualify. Average cloud percentages in the light-window table are duration-weighted; no partial forecast is presented as complete. Forecasts are approximate, and low cloud cover does not guarantee transparency or seeing. No new keys, Worker route or scheduled collector is required.

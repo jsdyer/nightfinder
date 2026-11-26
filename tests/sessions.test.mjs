@@ -24,3 +24,4 @@ test('a Moon rise or daylight inside the block splits eligibility; both endpoint
   assert.equal(observingSessions(night(altitudes, null, [-20,-20,-20,-20,-20,-18]), 30, false).length, 0);
   assert.equal(observingSessions(night([40,40,40,29,40,40]), 30, false).length, 0);
 });
+test('cloud limits evaluate every candidate and never interpret unknown hours as clear',()=>{const sky=night([33,46,53,65,64,59,47,35]);const [block]=observingSessions(sky,30,false,{maximum:20,summary:w=>w.start===0?{mean:10,maximum:20}:{mean:10,maximum:80}});assert.equal(block.startIndex,0);assert.equal(block.clouds.maximum,20);assert.equal(observingSessions(sky,30,false,{maximum:20,summary:()=>null}).length,0)});

@@ -10,3 +10,4 @@ test('polar daylight has no invented twilight and missing clouds stay missing',(
   assert.equal(cloudForWindow({time:[0],cloud_cover:[null]},{start:0,end:1000}),null);
   assert.equal(cloudForWindow({time:[0],cloud_cover:[0]},{start:0,end:1000}),0);
 });
+test('cloud summaries require complete, valid and continuous forecast coverage',async()=>{const {cloudSummary}=await import('../web/photography.mjs');const hour=3600000,window={start:0,end:hour*2};assert.deepEqual(cloudSummary({time:[0,3600,7200],cloud_cover:[0,20,40]},window),{mean:20,maximum:40});for(const h of [{time:[0,7200],cloud_cover:[0,0]},{time:[0,3600,7200],cloud_cover:[0,null,0]},{time:[0,3600,7200],cloud_cover:[0,-1,0]},{time:[0],cloud_cover:[0]}])assert.equal(cloudSummary(h,window),null)});

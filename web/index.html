@@ -31,6 +31,7 @@
     <form id="planner" class="panel">
       <h2>Plan a night</h2>
       <p class="muted">Search Canadian communities across all 13 provinces and territories, or enter your own observing coordinates.</p>
+      <label>Coastal photography preset <select id="photo-place"><option value="">Choose a photography place…</option></select></label><p id="photo-place-note" class="muted"></p><a id="photo-place-source" hidden href="https://natural-resources.canada.ca/">Official coordinate source</a>
       <div class="fields">
         <label>Province or territory <select id="region"><option value="">All of Canada</option></select></label>
         <label>Find a community <input id="place-search" type="search" placeholder="e.g. Iqaluit" autocomplete="off"></label>
@@ -43,7 +44,7 @@
         <label>Camera sensor <select id="sensor"><option value="36,24">Full frame · 36 × 24 mm</option><option value="23.5,15.6" selected>APS-C · 23.5 × 15.6 mm</option><option value="22.3,14.9">Canon APS-C · 22.3 × 14.9 mm</option><option value="17.3,13">Micro Four Thirds</option></select></label>
         <label>Focal length (mm) <input id="focal" type="number" min="6" max="6000" value="135" step="any" required></label>
       </div>
-      <details class="horizon-editor"><summary>Your balcony, buildings and local horizon</summary><p>Azimuth is clockwise from true north: N 0°, E 90°, S 180°, W 270°. Enter obstruction height in degrees, one <code>azimuth, altitude</code> pair per line. Points are joined with straight lines, including across north. Add points at both sides of a building edge. A single point makes a flat obstruction.</p><div class="fields"><label>Profile name<input id="horizon-name" maxlength="80" placeholder="Home balcony"></label><label>Obstruction profile<textarea id="horizon-points" rows="6" spellcheck="false" placeholder="0, 0&#10;90, 30&#10;180, 10&#10;270, 0">0, 0
+      <details class="horizon-editor"><summary>Saved locations, balcony and local horizon</summary><p>Azimuth is clockwise from true north: N 0°, E 90°, S 180°, W 270°. Enter obstruction height in degrees, one <code>azimuth, altitude</code> pair per line. Points are joined with straight lines, including across north. Add points at both sides of a building edge. A single point makes a flat obstruction.</p><div class="fields"><label>Location / profile name<input id="horizon-name" maxlength="80" placeholder="Home balcony"></label><label>Obstruction profile<textarea id="horizon-points" rows="6" spellcheck="false" placeholder="0, 0&#10;90, 30&#10;180, 10&#10;270, 0">0, 0
 90, 0
 180, 0
 270, 0</textarea></label><label>Extra clearance above obstruction<select id="horizon-margin"><option value="0">0°</option><option value="2" selected>2°</option><option value="5">5°</option><option value="10">10°</option></select></label><label>Minimum Moon separation<select id="moon-separation"><option value="0">No separation constraint</option><option value="20">20°</option><option value="30">30°</option><option value="45">45°</option><option value="60">60°</option></select></label></div><label class="horizon-check"><input id="use-horizon" type="checkbox"> Apply this obstruction profile</label><p class="muted">Moon separation applies while the Moon is above the geometric horizon, except when observing the Moon itself. It does not model sky brightness. Profiles apply only when enabled and are disabled when you change location.</p><div class="row"><button type="button" id="save-horizon">Save site and horizon</button><label>Saved sites<select id="saved-horizons"></select></label><button type="button" id="load-horizon">Load saved site</button><button type="button" id="delete-horizon">Delete saved site</button></div><p id="horizon-status" role="status">Profiles, coordinates and calculations stay in this browser. Up to 20 named sites can be saved.</p></details>
@@ -64,16 +65,17 @@
         <p class="muted">This button sends latitude and longitude to <a href="https://open-meteo.com/">Open-Meteo</a>. Forecast data: <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. Astronomy calculations stay on your device.</p>
         <p id="photo-empty" hidden>The Sun does not cross these light bands in the selected seven-day period.</p>
         <div class="scroll"><table><thead><tr><th>Light</th><th>Local start and end</th><th>Duration</th><th>Cloud cover near window</th></tr></thead><tbody id="photo-rows"></tbody></table></div>
-        <p><a href="https://coolcode.ca/tide-and-dark/">Match coastal photography with Tide &amp; Dark</a> · <a href="https://coolcode.ca/satpasses/">Find satellite passes</a></p>
+        <p><a id="tide-link" href="https://coolcode.ca/tide-and-dark/">Match coastal photography with Tide &amp; Dark</a> · <a href="https://coolcode.ca/satpasses/">Find satellite passes</a></p>
       </section>
       <section class="panel" aria-labelledby="session-heading">
         <h2 id="session-heading">Find an observing session</h2>
         <div class="fields">
           <label>Time on target <select id="duration"><option value="30">30 minutes</option><option value="60" selected>1 hour</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></label>
+          <label>Maximum forecast cloud <select id="session-cloud"><option value="any">Ignore cloud forecast</option><option value="20">20% at every forecast hour</option><option value="40">40% at every forecast hour</option><option value="60">60% at every forecast hour</option></select></label>
           <label>Moon constraint <select id="moon-rule"><option value="any">Any Moon altitude</option><option value="down">Moon below the horizon</option></select></label>
         </div>
-        <p class="muted">Each suggested block keeps the target above your minimum altitude and obstruction plus clearance, meets your Moon separation setting, and keeps the Sun below −18° at every six-minute sample. The highest minimum clearance above this combined cutoff wins for each target. Times include the local date and UTC offset.</p>
-        <p id="session-status" role="status"></p><div class="scroll"><table><thead><tr><th>Target</th><th>Session start and end</th><th>Point at start</th><th>Lowest target altitude</th><th>Highest Moon altitude</th><th>Minimum Moon separation</th><th>Minimum clearance above cutoff</th></tr></thead><tbody id="session-rows"></tbody></table></div>
+        <p class="muted">Each suggested block keeps the target above your minimum altitude and obstruction plus clearance, meets your Moon separation setting, and keeps the Sun below −18° at every six-minute sample. The highest minimum clearance above this combined cutoff wins for each target. An optional cloud limit requires a complete loaded forecast for the whole block; unknown hours are never treated as clear. Times include the local date and UTC offset.</p>
+        <p id="session-status" role="status"></p><div class="scroll"><table><thead><tr><th>Target</th><th>Session start and end</th><th>Point at start</th><th>Lowest target altitude</th><th>Highest Moon altitude</th><th>Minimum Moon separation</th><th>Minimum clearance above cutoff</th><th>Forecast cloud</th></tr></thead><tbody id="session-rows"></tbody></table></div>
       </section>
       <section class="panel">
         <div class="row between"><h2>Altitude through the night</h2><label>Show target <select id="target"></select></label></div>
