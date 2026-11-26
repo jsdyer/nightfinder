@@ -8,17 +8,20 @@
   <title>Canadian night sky and astrophotography planner · Nightfinder</title>
   <link rel="canonical" href="https://coolcode.ca/nightfinder/">
   <meta property="og:title" content="Nightfinder · Plan a night of astrophotography in Canada">
-  <link rel="stylesheet" href="./style.css">
+  <link rel="stylesheet" href="./style.css?v=sky-summary">
   <script defer src="./astronomy.js"></script>
-  <script defer src="/assets/tool-metrics.js"></script>
-  <script type="module" src="./app.mjs"></script>
+  <script defer src="/assets/tool-metrics.js" referrerpolicy="no-referrer"></script>
+  <script type="module" src="./app.mjs?v=sky-summary"></script>
 </head>
 <body>
   <header class="mast">
     <div class="wrap">
-      <nav><a class="brand" href="https://coolcode.ca/"><b>&gt;_</b> CoolCode.ca</a><span>Sky photography</span></nav>
+      <nav><a class="brand" href="https://coolcode.ca/"><b>&gt;_</b> CoolCode.ca</a><span>Nightfinder</span></nav>
       <div class="hero">
-        <div><h1>Nightfinder.</h1><p>Find a continuous dark window for your camera, see which targets stay high enough, and check where to point when you arrive.</p></div>
+        <div><h1>Canadian Night Sky Planner</h1>
+          <p>Find tonight’s dark hours, Moon phase and targets for stargazing or astrophotography.</p>
+          <div class="sky-actions"><a href="#place-search">Choose your community</a><a href="?photo_place=peggys-cove#sky-summary">See Peggy’s Cove tonight</a></div>
+        </div>
         <pre class="terminal" aria-hidden="true">  .    *         .
       .     _✦_
   ·       /     \  ·
@@ -28,6 +31,14 @@
     </div>
   </header>
   <main class="wrap">
+    <section id="sky-summary" aria-labelledby="sky-title" tabindex="-1" hidden>
+      <h2 id="sky-title">Night sky summary</h2>
+      <dl class="stats">
+        <div><dt>Astronomical dark</dt><dd id="dark"></dd></div>
+        <div><dt>Moon at mid-night</dt><dd id="moon"></dd></div>
+        <div><dt>Horizontal × vertical frame</dt><dd id="fov"></dd></div>
+      </dl>
+    </section>
     <form id="planner" class="panel">
       <h2>Plan a night</h2>
       <p class="muted">Search Canadian communities across all 13 provinces and territories, or enter your own observing coordinates.</p>
@@ -52,11 +63,7 @@
       <div class="row"><button class="primary" type="submit">Calculate sky</button><p id="status" role="status">Calculations run on your device.</p></div>
     </form>
     <div id="results" hidden>
-      <dl class="stats">
-        <div><dt>Astronomical dark</dt><dd id="dark"></dd></div>
-        <div><dt>Moon at mid-night</dt><dd id="moon"></dd></div>
-        <div><dt>Horizontal × vertical frame</dt><dd id="fov"></dd></div>
-      </dl>
+
       <section class="panel" id="photography" aria-labelledby="photo-title">
         <h2 id="photo-title">Seven days of golden and blue light</h2>
         <p class="muted">Starting at local noon on your selected date. Golden light uses a geometric Sun altitude of −4° to +6°; blue hour uses −6° to −4°. Terrain, weather and your subject affect the actual light.</p>

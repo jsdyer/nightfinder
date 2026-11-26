@@ -75,6 +75,8 @@ function build() {
   $('moon').textContent = moonPhases[Math.round(current.moonPhase / 45) % 8] + ' · ' + Math.round(100 * current.moonLight) + '% lit';
   $('fov').textContent = degrees(current.frame.width) + ' × ' + degrees(current.frame.height);
   $('target').replaceChildren(...current.targets.map(item => new Option(item.name, item.id)));
+  $('sky-title').textContent = settings.name + ' · night of ' + settings.date;
+  $('sky-summary').hidden = false;
   $('results').hidden = false;
   const firstDark = current.samples.findIndex(item => item.sun < -18);
   $('time').max = current.samples.length - 1;
@@ -272,7 +274,14 @@ $('site').addEventListener('change', preset);
 for (const field of ['lat','lon','zone']) $(field).addEventListener('input', () => { $('site').value = 'custom';$('use-horizon').checked=false;$('horizon-status').textContent='Location changed. Re-enable or load the appropriate horizon profile for this site.'; });
 $('planner').addEventListener('submit', event => {
   event.preventDefault();
-  try { build(); } catch (error) { status(error.message, true); $('results').hidden = true; }
+  try {
+    build();
+    $('sky-summary').focus();
+  } catch (error) {
+    status(error.message, true);
+    $('sky-summary').hidden = true;
+    $('results').hidden = true;
+  }
 });
 $('target').addEventListener('change', () => {renderTargets(); graph();});
 $('category').addEventListener('change', renderTargets);
@@ -301,4 +310,11 @@ showProfiles();
 for(const p of photoPlaces)$('photo-place').add(new Option(p.name,p.id));
 function usePhotoPlace(id){const p=photoPlaces.find(x=>x.id===id);if(!p)return;$('photo-place').value=p.id;$('site').value='custom';$('lat').value=p.lat;$('lon').value=p.lon;$('zone').value=p.zone;$('horizon-name').value=p.name;$('use-horizon').checked=false;$('photo-place-note').textContent=p.note;$('photo-place-source').href=p.source;$('photo-place-source').hidden=false;$('horizon-status').textContent='Photography preset loaded. Save site and horizon to keep this location in this browser.';const link=new URL('https://coolcode.ca/tide-and-dark/');link.search=new URLSearchParams({photo_place:p.id,day_date:$('date').value,mode:'day'});$('tide-link').href=link.href;}
 $('photo-place').onchange=()=>{usePhotoPlace($('photo-place').value);try{build();}catch(e){status(e.message,true)}};
-const query=new URLSearchParams(location.search);if(photoPlaces.some(p=>p.id===query.get('photo_place'))){usePhotoPlace(query.get('photo_place'));const day=query.get('date');if(/^\d{4}-\d{2}-\d{2}$/.test(day||'')&&day>='1900-01-01'&&day<='2100-12-30')$('date').value=day;}
+const query = new URLSearchParams(location.search);
+const linkedPlace = photoPlaces.find(place => place.id === query.get('photo_place'));
+if (linkedPlace) {
+  usePhotoPlace(linkedPlace.id);
+  const day = query.get('date');
+  $('date').value = /^\d{4}-\d{2}-\d{2}$/.test(day || '') && day >= '1900-01-01' && day <= '2100-12-30'
+    ? day : dateAt(new Date(), linkedPlace.zone);
+}

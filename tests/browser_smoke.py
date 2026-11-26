@@ -17,6 +17,14 @@ def main():
     browser=p.chromium.launch(executable_path=__import__('os').environ.get('CHROMIUM_PATH'));page=browser.new_page(viewport={'width':1280,'height':900});errors=[]
     page.on('pageerror',lambda e:errors.append(str(e)))
     page.goto(f'http://127.0.0.1:{server.server_port}/nightfinder/')
+    expect(page.get_by_role('heading', level=1)).to_have_text('Canadian Night Sky Planner')
+    expect(page.locator('#sky-summary')).to_be_visible()
+    page.get_by_role('link', name='See Peggy’s Cove tonight').click()
+    expect(page.locator('#sky-title')).to_contain_text('Peggy’s Cove')
+    expect(page.locator('#photo-place')).to_have_value('peggys-cove')
+    assert page.locator('#dark').inner_text()
+    page.get_by_role('link', name='Choose your community').click()
+    expect(page.locator('#place-search')).to_be_focused()
     expect(page.locator('#results')).to_be_visible()
     page.get_by_text('Saved locations, balcony and local horizon',exact=True).click()
     page.locator('#horizon-name').fill('Test balcony')
@@ -49,6 +57,8 @@ def main():
     expect(page.locator('#tide-link')).to_have_attribute('href',__import__('re').compile('photo_place=stanley-park'))
     for width,height in [(390,844),(320,700)]:
      page.set_viewport_size({'width':width,'height':height});assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),f'overflow {width}'
+    page.evaluate('window.scrollTo(0,0)')
+    assert page.get_by_role('link', name='Choose your community').bounding_box()['y'] < 700
     assert not errors,errors;browser.close()
   finally:server.shutdown();server.server_close()
  print('Nightfinder horizon/browser checks passed')
